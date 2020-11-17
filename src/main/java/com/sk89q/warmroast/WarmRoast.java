@@ -225,7 +225,7 @@ public class WarmRoast extends TimerTask {
 
         //remove the jvm launching warmroast
         List<VirtualMachineDescriptor> virtualMachineDescriptors = VirtualMachine.list().stream()
-                .filter(vmd -> vmd.displayName().contains("com.sk89q.warmroast.WarmRoast"))
+                .filter(vmd -> !vmd.displayName().contains("com.sk89q.warmroast.WarmRoast"))
                 .collect(Collectors.toList());;
         
         VirtualMachine vm = null;
