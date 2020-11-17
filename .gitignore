@@ -21,6 +21,7 @@
 /dist
 /manifest.mf
 /dependency-reduced-pom.xml
+/src/main/java/META-INF
 
 # Mac filesystem dust
 /.DS_Store

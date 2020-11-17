@@ -35,6 +35,7 @@ import java.util.SortedMap;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import javax.management.MBeanServerConnection;
 import javax.management.MalformedObjectNameException;
@@ -155,22 +156,30 @@ public class WarmRoast extends TimerTask {
                 return;
             }
         }
-        
-        ThreadInfo[] threadDumps = threadBean.dumpAllThreads(false, false);
-        for (ThreadInfo threadInfo : threadDumps) {
-            String threadName = threadInfo.getThreadName();
-            StackTraceElement[] stack = threadInfo.getStackTrace();
-            
-            if (threadName == null || stack == null) {
-                continue;
+        //try in case of the monitored vm crashes/stops
+        try {
+            ThreadInfo[] threadDumps = threadBean.dumpAllThreads(false, false);
+            for (ThreadInfo threadInfo : threadDumps) {
+                String threadName = threadInfo.getThreadName();
+                StackTraceElement[] stack = threadInfo.getStackTrace();
+
+                if (threadName == null || stack == null) {
+                    continue;
+                }
+
+                if (filterThread != null && !filterThread.equals(threadName)) {
+                    continue;
+                }
+
+                StackNode node = getNode(threadName);
+                node.log(stack, interval);
             }
-            
-            if (filterThread != null && !filterThread.equals(threadName)) {
-                continue;
-            }
-            
-            StackNode node = getNode(threadName);
-            node.log(stack, interval);
+        }
+        catch (Exception e){
+            System.err.println("There was an error while monitoring the jvm");
+            System.err.println("Warmroast is stopping");
+            cancel();
+            System.exit(3);
         }
     }
 
@@ -213,6 +222,11 @@ public class WarmRoast extends TimerTask {
         System.err.println("http://github.com/sk89q/warmroast");
         System.err.println(SEPARATOR);
         System.err.println("");
+
+        //remove the jvm launching warmroast
+        List<VirtualMachineDescriptor> virtualMachineDescriptors = VirtualMachine.list().stream()
+                .filter(vmd -> vmd.displayName().contains("com.sk89q.warmroast.WarmRoast"))
+                .collect(Collectors.toList());;
         
         VirtualMachine vm = null;
         
@@ -226,7 +240,7 @@ public class WarmRoast extends TimerTask {
                 System.exit(1);
             }
         } else if (opt.vmName != null) {
-            for (VirtualMachineDescriptor desc : VirtualMachine.list()) {
+            for (VirtualMachineDescriptor desc : virtualMachineDescriptors) {
                 if (desc.displayName().contains(opt.vmName)) {
                     try {
                         vm = VirtualMachine.attach(desc);
@@ -243,10 +257,9 @@ public class WarmRoast extends TimerTask {
         }
         
         if (vm == null) {
-            List<VirtualMachineDescriptor> descriptors = VirtualMachine.list();
             System.err.println("Choose a VM:");
             
-            Collections.sort(descriptors, new Comparator<VirtualMachineDescriptor>() {
+            Collections.sort(virtualMachineDescriptors, new Comparator<VirtualMachineDescriptor>() {
                 @Override
                 public int compare(VirtualMachineDescriptor o1,
                         VirtualMachineDescriptor o2) {
@@ -256,7 +269,7 @@ public class WarmRoast extends TimerTask {
             
             // Print list of VMs
             int i = 1;
-            for (VirtualMachineDescriptor desc : descriptors) {
+            for (VirtualMachineDescriptor desc : virtualMachineDescriptors) {
                 System.err.println("[" + (i++) + "] " + desc.displayName());
             }
             
@@ -274,12 +287,12 @@ public class WarmRoast extends TimerTask {
             // Get the VM
             try {
                 int choice = Integer.parseInt(s) - 1;
-                if (choice < 0 || choice >= descriptors.size()) {
+                if (choice < 0 || choice >= virtualMachineDescriptors.size()) {
                     System.err.println("");
                     System.err.println("Given choice is out of range.");
                     System.exit(1);
                 }
-                vm = VirtualMachine.attach(descriptors.get(choice));
+                vm = VirtualMachine.attach(virtualMachineDescriptors.get(choice));
             } catch (NumberFormatException e) {
                 System.err.println("");
                 System.err.println("That's not a number. Bye.");
@@ -331,5 +344,4 @@ public class WarmRoast extends TimerTask {
             System.exit(3);
         }
     }
-
 }
