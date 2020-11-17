@@ -227,7 +227,10 @@ public class WarmRoast extends TimerTask {
         List<VirtualMachineDescriptor> virtualMachineDescriptors = VirtualMachine.list().stream()
                 .filter(vmd -> !vmd.displayName().contains("com.sk89q.warmroast.WarmRoast"))
                 .collect(Collectors.toList());;
-        
+        if (virtualMachineDescriptors.size() == 0){
+            System.err.println("There is no jvm to sample, launch one first.");
+            System.exit(1);
+        }
         VirtualMachine vm = null;
         
         if (opt.pid != null) {
