@@ -1,0 +1,50 @@
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+
+eclipse {
+    classpath {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}
+
+idea {
+    module {
+        inheritOutputDirs = true
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.eclipse.jetty:jetty-servlet:9.0.3.v20130506'
+    implementation 'commons-io:commons-io:2.4'
+    implementation 'net.sf.opencsv:opencsv:2.0'
+    implementation 'com.beust:jcommander:1.30'
+    implementation files("${System.getProperty('java.home')}/../lib/tools.jar")
+}
+
+group = 'com.sk89q'
+version = '1.0.0-SNAPSHOT'
+description = 'WarmRoast'
+
+java.sourceCompatibility = JavaVersion.VERSION_1_8
+java.targetCompatibility = JavaVersion.VERSION_1_8
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from(components.java)
+        }
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
